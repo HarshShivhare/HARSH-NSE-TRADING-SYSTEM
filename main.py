@@ -17,6 +17,14 @@ from app.stability import stability_tables, write_stability_reports
 from app.robustness import run_development_grid, run_final_oos, write_robustness_reports
 from app.universe import build_current_nse_universe
 from app.signal_diagnostics import run_signal_diagnostics, write_signal_diagnostic_reports
+from app.extension_robustness import (
+    run_extension_development_grid,
+    write_extension_reports,
+    parse_optional_float_csv,
+    parse_bool_csv,
+)
+from app.trade_path_analysis import run_trade_path_analysis, write_trade_path_reports
+from app.post_breakout_analysis import run_post_breakout_analysis, write_post_breakout_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -107,6 +115,9 @@ def _strategy_config_from_args(args):
         target_r=getattr(args, "target_r", 2.0),
         earliest_entry=args.earliest_entry,
         latest_entry=args.latest_entry,
+        require_trend=getattr(args, "require_trend", True),
+        max_vwap_extension_pct=getattr(args, "max_vwap_extension_pct", None),
+        max_or_extension_atr=getattr(args, "max_or_extension_atr", None),
     )
 
 
@@ -304,6 +315,117 @@ def cmd_signal_diagnostics(args):
         print(f"  {name:24s}: {path.name}")
     print("\nResearch note: these are diagnostic forward-return measurements, not a tradable strategy or final OOS test.")
 
+
+def cmd_extension_robustness(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    scfg, bcfg = _strategy_config_from_args(args), _bt_config_from_args(args)
+    try:
+        trend_modes = parse_bool_csv(args.trend_modes)
+        vwap_maxes = parse_optional_float_csv(args.vwap_maxes)
+        or_maxes = parse_optional_float_csv(args.or_maxes)
+        rvols = _csv_floats(args.rvols)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    results, ranking = run_extension_development_grid(
+        files=files,
+        base_strategy=scfg,
+        bt_cfg=bcfg,
+        trend_modes=trend_modes,
+        vwap_maxes=vwap_maxes,
+        or_maxes=or_maxes,
+        rvols=rvols,
+        dev_start=args.dev_start,
+        dev_end=args.dev_end,
+        validation_start=args.validation_start,
+        validation_end=args.validation_end,
+        min_trades_per_split=args.min_trades,
+        bootstrap_samples=args.bootstrap_samples,
+    )
+
+    print("\n=== V10 EXTENSION-AWARE ROBUSTNESS — DEV + VALIDATION ONLY ===")
+    print(f"grid combinations          : {len(ranking)}")
+    print(f"robust-gate combinations   : {int(ranking['robust_gate'].sum()) if not ranking.empty else 0}")
+    print("\nTop candidates (2026 OOS remains locked):")
+    cols = [
+        "trend", "max_vwap_extension_pct", "max_or_extension_atr", "rvol_min",
+        "trades_dev", "expectancy_r_dev", "profit_factor_dev",
+        "trades_validation", "expectancy_r_validation", "profit_factor_validation",
+        "expectancy_ci_low_dev", "expectancy_ci_low_validation",
+        "robust_gate", "ci_positive_both", "worst_split_expectancy_r",
+    ]
+    print(ranking[cols].head(args.top).to_string(index=False) if not ranking.empty else "No results")
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"extension_robustness_{stamp}"
+    paths = write_extension_reports(report_dir, results, ranking)
+    print(f"\nV10 reports: {report_dir.resolve()}")
+    for name, path in paths.items():
+        print(f"  {name:22s}: {path.name}")
+    print("\n2026 FINAL OOS was NOT evaluated and this command has no final stage by design.")
+    print("Only promote a broad, stable parameter neighborhood; do not tune to one winning cell.")
+
+def cmd_trade_path(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    args.require_trend = (args.trend == "on")
+    scfg, bcfg = _strategy_config_from_args(args), _bt_config_from_args(args)
+    result = run_trade_path_analysis(
+        files, scfg, bcfg,
+        dev_start=args.dev_start, dev_end=args.dev_end,
+        validation_start=args.validation_start, validation_end=args.validation_end,
+    )
+    print("\n=== V11 TRADE PATH + BARRIER ANALYSIS — DEV + VALIDATION ONLY ===")
+    print(f"events : {len(result.events)}")
+    print("\n--- LIFECYCLE ---")
+    print(result.lifecycle.to_string(index=False) if not result.lifecycle.empty else "No events")
+    print("\n--- BARRIER ORDERING + COST DECOMPOSITION ---")
+    print(result.barrier_ordering.to_string(index=False) if not result.barrier_ordering.empty else "No events")
+    print("\n--- TIME PROFILE ---")
+    print(result.time_profile.to_string(index=False) if not result.time_profile.empty else "No events")
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"trade_path_{stamp}"
+    paths = write_trade_path_reports(result, report_dir, scfg)
+    print(f"\nV11 reports: {report_dir.resolve()}")
+    for name, path in paths.items():
+        print(f"  {name:22s}: {path.name}")
+    print(f"\nOpen graphical dashboard: {paths['dashboard'].resolve()}")
+    print("2026 FINAL OOS was NOT evaluated. This command only reads DEV + VALIDATION dates.")
+
+
+def cmd_post_breakout(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    args.require_trend = (args.trend == "on")
+    scfg = _strategy_config_from_args(args)
+    result = run_post_breakout_analysis(
+        files, scfg,
+        dev_start=args.dev_start, dev_end=args.dev_end,
+        validation_start=args.validation_start, validation_end=args.validation_end,
+        bootstrap_samples=args.bootstrap_samples,
+    )
+    print("\n=== V12 DELAYED ENTRY + RETEST ANALYSIS — DEV + VALIDATION ONLY ===")
+    print(f"events : {len(result.events)} across delayed-entry variants")
+    print("\n--- DELAY / HORIZON SUMMARY ---")
+    print(result.delay_summary.to_string(index=False) if not result.delay_summary.empty else "No events")
+    print("\n--- 120M DISTRIBUTION SUMMARY ---")
+    print(result.distribution_summary.to_string(index=False) if not result.distribution_summary.empty else "No events")
+    print("\n--- POSITIVE RETURN CONCENTRATION ---")
+    print(result.concentration_summary.to_string(index=False) if not result.concentration_summary.empty else "No events")
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"post_breakout_{stamp}"
+    paths = write_post_breakout_reports(result, report_dir, scfg)
+    print(f"\nV12 reports: {report_dir.resolve()}")
+    for name, path in paths.items():
+        print(f"  {name:24s}: {path.name}")
+    print(f"\nOpen graphical dashboard: {paths['dashboard'].resolve()}")
+    print("2026 FINAL OOS was NOT evaluated. V12 only reads DEV + VALIDATION dates.")
+
+
 def cmd_robustness(args):
     files = _matched_files(args.data_glob)
     if not files:
@@ -423,6 +545,39 @@ def build_parser():
     p.add_argument("--session-end",default="2025-12-31")
     add_strategy_args(p,False)
     p.set_defaults(func=cmd_signal_diagnostics)
+
+    p=sub.add_parser("extension-robustness", help="V10 extension-aware breakout robustness; DEV + validation only")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet")
+    p.add_argument("--report-dir",default="reports")
+    p.add_argument("--trend-modes",default="on,off",help="Comma list: on,off")
+    p.add_argument("--vwap-maxes",default="none,1.0,0.75",help="Max entry extension above signal VWAP in percent; use none for no cap")
+    p.add_argument("--or-maxes",default="none,0.5,0.25",help="Max entry extension above OR high in ATR; use none for no cap")
+    p.add_argument("--rvols",default="1.5,3.0")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--min-trades",type=int,default=20); p.add_argument("--bootstrap-samples",type=int,default=1000); p.add_argument("--top",type=int,default=20)
+    add_strategy_args(p,True); add_bt_args(p); p.set_defaults(func=cmd_extension_robustness)
+
+    p=sub.add_parser("trade-path", help="V11 trade path, barrier ordering, cost decomposition + graphical dashboard")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet")
+    p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--trend",choices=["on","off"],default="off",help="Trend filter mode; V11 default follows the best broad V10 family")
+    p.add_argument("--max-vwap-extension-pct",type=float,default=None,help="Optional next-bar entry cap above signal VWAP in percent")
+    p.add_argument("--max-or-extension-atr",type=float,default=0.5,help="Optional next-bar entry cap above OR high in ATR; default 0.5")
+    add_strategy_args(p,True); add_bt_args(p)
+    p.set_defaults(func=cmd_trade_path, rvol_min=3.0)
+
+    p=sub.add_parser("post-breakout", help="V12 delayed-entry, retest/confirmation and distribution research")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet")
+    p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--trend",choices=["on","off"],default="off")
+    p.add_argument("--bootstrap-samples",type=int,default=1000)
+    add_strategy_args(p,True)
+    p.set_defaults(func=cmd_post_breakout, rvol_min=3.0, max_or_extension_atr=0.5, max_vwap_extension_pct=None)
 
     p=sub.add_parser("robustness", help="V8 parameter robustness with protected final OOS")
     p.add_argument("--stage", choices=["develop","final"], default="develop")

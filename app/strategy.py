@@ -18,6 +18,9 @@ class StrategyConfig:
     target_r: float = 2.0
     earliest_entry: str = "09:30"
     latest_entry: str = "14:45"
+    require_trend: bool = True
+    max_vwap_extension_pct: float | None = None
+    max_or_extension_atr: float | None = None
 
 
 def _normalise(df: pd.DataFrame) -> pd.DataFrame:
@@ -90,13 +93,20 @@ def prepare_features(df: pd.DataFrame, cfg: StrategyConfig) -> pd.DataFrame:
     out["rvol"] = out["volume"] / slot_mean.replace(0, np.nan)
     out["atr"] = _atr(out, cfg.atr_period)
 
+    # Session VWAP from regular intraday bars. Used by V10 as an execution-quality guard.
+    typical = (out["high"] + out["low"] + out["close"]) / 3.0
+    pv = typical * out["volume"]
+    cum_pv = pv.groupby(out["session"]).cumsum()
+    cum_vol = out["volume"].groupby(out["session"]).cumsum().replace(0, np.nan)
+    out["vwap"] = cum_pv / cum_vol
+
     return out
 
 
 def signal_mask(features: pd.DataFrame, cfg: StrategyConfig) -> pd.Series:
     f = features
     time_ok = (f["time"] >= cfg.earliest_entry) & (f["time"] <= cfg.latest_entry)
-    trend_ok = f["prev_close"] > f["daily_sma"]
+    trend_ok = (f["prev_close"] > f["daily_sma"]) if cfg.require_trend else pd.Series(True, index=f.index)
     gap_ok = f["gap_pct"] >= cfg.gap_min_pct
     breakout_ok = (f["close"] > f["prev_high"]) & (f["close"] > f["or_high"])
     rvol_ok = f["rvol"] >= cfg.rvol_min

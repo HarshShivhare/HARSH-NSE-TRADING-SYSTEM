@@ -84,6 +84,23 @@ def run_symbol_backtest(
             entry_idx = sig_idx + 1
             entry_row = day.loc[entry_idx]
             raw_entry = float(entry_row["open"])
+
+            # V10 extension-aware execution guards. The signal is generated on the
+            # previous 5-minute close; at the next bar open we can choose not to
+            # chase a breakout that has become too extended.
+            signal_vwap = float(signal_row["vwap"]) if pd.notna(signal_row.get("vwap")) else np.nan
+            vwap_extension_pct = (raw_entry / signal_vwap - 1.0) * 100.0 if np.isfinite(signal_vwap) and signal_vwap > 0 else np.nan
+            signal_atr = float(signal_row["atr"]) if pd.notna(signal_row.get("atr")) else np.nan
+            signal_or_high = float(signal_row["or_high"]) if pd.notna(signal_row.get("or_high")) else np.nan
+            or_extension_atr = (raw_entry - signal_or_high) / signal_atr if np.isfinite(signal_atr) and signal_atr > 0 and np.isfinite(signal_or_high) else np.nan
+
+            if strategy_cfg.max_vwap_extension_pct is not None:
+                if not np.isfinite(vwap_extension_pct) or vwap_extension_pct > strategy_cfg.max_vwap_extension_pct:
+                    continue
+            if strategy_cfg.max_or_extension_atr is not None:
+                if not np.isfinite(or_extension_atr) or or_extension_atr > strategy_cfg.max_or_extension_atr:
+                    continue
+
             entry = _apply_slippage(raw_entry, bt_cfg.slippage_bps_each_side, "buy")
             stop = _choose_stop(signal_row, strategy_cfg, entry)
             if not math.isfinite(stop) or stop <= 0 or stop >= entry:
@@ -157,6 +174,11 @@ def run_symbol_backtest(
                     "gap_pct": signal_row["gap_pct"],
                     "rvol": signal_row["rvol"],
                     "atr": signal_row["atr"],
+                    "entry_vs_vwap_pct": vwap_extension_pct,
+                    "entry_vs_or_high_atr": or_extension_atr,
+                    "trend_required": strategy_cfg.require_trend,
+                    "max_vwap_extension_pct": strategy_cfg.max_vwap_extension_pct,
+                    "max_or_extension_atr": strategy_cfg.max_or_extension_atr,
                     "exit_reason": exit_reason,
                     "gross_pnl": gross_pnl,
                     "charges": charge_breakdown["total"],
