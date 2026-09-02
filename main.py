@@ -25,6 +25,8 @@ from app.extension_robustness import (
 )
 from app.trade_path_analysis import run_trade_path_analysis, write_trade_path_reports
 from app.post_breakout_analysis import run_post_breakout_analysis, write_post_breakout_reports
+from app.confirmation_backtest import run_confirmation_backtest, write_confirmation_reports
+from app.retest_discovery import run_retest_discovery, write_retest_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -426,6 +428,37 @@ def cmd_post_breakout(args):
     print("2026 FINAL OOS was NOT evaluated. V12 only reads DEV + VALIDATION dates.")
 
 
+def cmd_confirmation_backtest(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    args.require_trend = (args.trend == "on")
+    scfg = _strategy_config_from_args(args)
+    result = run_confirmation_backtest(
+        files, scfg,
+        dev_start=args.dev_start, dev_end=args.dev_end,
+        validation_start=args.validation_start, validation_end=args.validation_end,
+        account_capital=args.example_capital, risk_pct=args.example_risk_pct,
+        slippage_bps_each_side=args.slippage_bps, bootstrap_samples=args.bootstrap_samples,
+    )
+    print("\n=== V13 +5M CONFIRMATION TRADE CONSTRUCTION — DEV + VALIDATION ONLY ===")
+    print(f"trade variants : {len(result.trades)}")
+    print("\n--- NET STRATEGY SUMMARY ---")
+    print(result.summary.to_string(index=False) if not result.summary.empty else "No trades")
+    print("\n--- ₹1,00,000 ILLUSTRATIVE ACCOUNT ECONOMICS ---")
+    focus = result.capital_example[(result.capital_example["confirmation"] == "ABOVE_OR_VWAP") & (result.capital_example["exit_mode"] == "STOP1R_TIME")] if not result.capital_example.empty else result.capital_example
+    print(focus.to_string(index=False) if not focus.empty else "No focus trades")
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"confirmation_backtest_{stamp}"
+    paths = write_confirmation_reports(result, report_dir, scfg, args.example_capital, args.example_risk_pct)
+    print(f"\nV13 reports: {report_dir.resolve()}")
+    for name, path in paths.items():
+        print(f"  {name:24s}: {path.name}")
+    print(f"\nOpen graphical dashboard: {paths['dashboard'].resolve()}")
+    print("2026 FINAL OOS was NOT evaluated. V13 only reads DEV + VALIDATION dates.")
+    print("₹1L figures are independent per-trade illustrations, not a shared-capital/compounded portfolio simulation.")
+
+
 def cmd_robustness(args):
     files = _matched_files(args.data_glob)
     if not files:
@@ -509,6 +542,22 @@ def add_bt_args(p):
     p.add_argument("--slippage-bps", type=float, default=5.0)
 
 
+
+def cmd_retest_discovery(args):
+    files=_matched_files(args.data_glob)
+    if not files: raise SystemExit(f"No files matched: {args.data_glob}")
+    args.require_trend=(args.trend=="on"); scfg=_strategy_config_from_args(args)
+    result=run_retest_discovery(files,scfg,args.dev_start,args.dev_end,args.validation_start,args.validation_end)
+    print("\n=== V14 RETEST DISCOVERY + OPPORTUNITY CHARACTERISTICS — DEV + VALIDATION ONLY ===")
+    print(f"retest events : {len(result.events)}")
+    print("\n--- RETEST SUMMARY ---"); print(result.summary.to_string(index=False) if not result.summary.empty else "No retests")
+    print("\n--- FEATURE BUCKETS ---"); print(result.buckets.to_string(index=False) if not result.buckets.empty else "No buckets")
+    stamp=datetime.now().strftime("%Y%m%d_%H%M%S"); report_dir=Path(args.report_dir)/f"retest_discovery_{stamp}"
+    paths=write_retest_reports(result,report_dir,scfg); print(f"\nV14 reports: {report_dir.resolve()}")
+    for name,path in paths.items(): print(f"  {name:24s}: {path.name}")
+    print(f"\nOpen graphical dashboard: {paths['dashboard'].resolve()}")
+    print("2026 FINAL OOS was NOT evaluated. V14 is discovery-only; no capital is allocated.")
+
 def build_parser():
     parser = argparse.ArgumentParser(description="NSE trading system V8 - robust development/validation/OOS research")
     sub = parser.add_subparsers(required=True)
@@ -578,6 +627,26 @@ def build_parser():
     p.add_argument("--bootstrap-samples",type=int,default=1000)
     add_strategy_args(p,True)
     p.set_defaults(func=cmd_post_breakout, rvol_min=3.0, max_or_extension_atr=0.5, max_vwap_extension_pct=None)
+
+    p=sub.add_parser("confirmation-backtest", help="V13 frozen +5m confirmation, tradable exits, costs and ₹1L example")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet")
+    p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--trend",choices=["on","off"],default="off")
+    p.add_argument("--bootstrap-samples",type=int,default=1000)
+    p.add_argument("--example-capital",type=float,default=100000.0,help="Illustrative account size; default ₹1,00,000")
+    p.add_argument("--example-risk-pct",type=float,default=0.005,help="Risk fraction per trade for ₹1L example; default 0.005 = 0.5%%")
+    p.add_argument("--slippage-bps",type=float,default=5.0,help="Slippage in bps each side")
+    add_strategy_args(p,True)
+    p.set_defaults(func=cmd_confirmation_backtest, rvol_min=3.0, max_or_extension_atr=0.5, max_vwap_extension_pct=None)
+
+    p=sub.add_parser("retest-discovery", help="V14 breakout-retest discovery + opportunity characteristics dashboard")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--trend",choices=["on","off"],default="off"); add_strategy_args(p,True)
+    p.set_defaults(func=cmd_retest_discovery,rvol_min=3.0,max_or_extension_atr=0.5,max_vwap_extension_pct=None)
 
     p=sub.add_parser("robustness", help="V8 parameter robustness with protected final OOS")
     p.add_argument("--stage", choices=["develop","final"], default="develop")
