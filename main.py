@@ -16,6 +16,7 @@ from app.data_cleaner import clean_market_data, summarize_cleaning
 from app.stability import stability_tables, write_stability_reports
 from app.robustness import run_development_grid, run_final_oos, write_robustness_reports
 from app.universe import build_current_nse_universe
+from app.signal_diagnostics import run_signal_diagnostics, write_signal_diagnostic_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -272,6 +273,37 @@ def _csv_ints(value: str) -> list[int]:
     return [int(x.strip()) for x in value.split(",") if x.strip()]
 
 
+
+def cmd_signal_diagnostics(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    cfg = _strategy_config_from_args(args)
+    result = run_signal_diagnostics(
+        files, cfg, session_start=args.session_start, session_end=args.session_end
+    )
+    print("\n=== V9 SIGNAL DIAGNOSTICS ===")
+    print(f"files analyzed : {len(files)}")
+    print(f"events         : {len(result.events)} across all diagnostic variants")
+    for title, table in [
+        ("CUMULATIVE FILTER STAGES", result.stage_summary),
+        ("DROP-ONE FILTER TEST", result.drop_one_summary),
+        ("FULL SIGNAL BY VWAP EXTENSION", result.by_vwap_extension),
+        ("FULL SIGNAL BY OR EXTENSION / ATR", result.by_or_extension_atr),
+        ("FULL SIGNAL BY ENTRY TIME", result.by_entry_time),
+        ("FULL SIGNAL BY GAP", result.by_gap),
+        ("FULL SIGNAL BY RVOL", result.by_rvol),
+    ]:
+        print(f"\n--- {title} ---")
+        print(table.to_string(index=False) if not table.empty else "No data")
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"signal_diagnostics_{stamp}"
+    paths = write_signal_diagnostic_reports(result, report_dir)
+    print(f"\nV9 reports: {report_dir.resolve()}")
+    for name, path in paths.items():
+        print(f"  {name:24s}: {path.name}")
+    print("\nResearch note: these are diagnostic forward-return measurements, not a tradable strategy or final OOS test.")
+
 def cmd_robustness(args):
     files = _matched_files(args.data_glob)
     if not files:
@@ -382,6 +414,15 @@ def build_parser():
     p=sub.add_parser("stability", help="Cleaned-data stability analysis by year/stock/gap/RVOL/entry time")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports"); p.add_argument("--session-start"); p.add_argument("--session-end"); add_strategy_args(p,True); add_bt_args(p); p.set_defaults(func=cmd_stability)
 
+
+
+    p=sub.add_parser("signal-diagnostics", help="V9 filter ablation + forward-return / entry-extension diagnostics")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet")
+    p.add_argument("--report-dir",default="reports")
+    p.add_argument("--session-start",default="2023-09-01")
+    p.add_argument("--session-end",default="2025-12-31")
+    add_strategy_args(p,False)
+    p.set_defaults(func=cmd_signal_diagnostics)
 
     p=sub.add_parser("robustness", help="V8 parameter robustness with protected final OOS")
     p.add_argument("--stage", choices=["develop","final"], default="develop")
