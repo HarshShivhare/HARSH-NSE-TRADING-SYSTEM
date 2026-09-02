@@ -14,6 +14,7 @@ from app.data_validator import validate_files, write_validation_reports
 from app.research import target_sensitivity, write_research_reports
 from app.data_cleaner import clean_market_data, summarize_cleaning
 from app.stability import stability_tables, write_stability_reports
+from app.robustness import run_development_grid, run_final_oos, write_robustness_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -241,6 +242,76 @@ def cmd_research(args):
     print("\nIMPORTANT: Choose/freeze parameters using DEVELOPMENT only. OUT_OF_SAMPLE is for confirmation, not tuning.")
 
 
+
+def _csv_floats(value: str) -> list[float]:
+    return [float(x.strip()) for x in value.split(",") if x.strip()]
+
+
+def _csv_ints(value: str) -> list[int]:
+    return [int(x.strip()) for x in value.split(",") if x.strip()]
+
+
+def cmd_robustness(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    scfg, bcfg = _strategy_config_from_args(args), _bt_config_from_args(args)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"robustness_{stamp}"
+
+    if args.stage == "develop":
+        results, ranking = run_development_grid(
+            files=files,
+            base_strategy=scfg,
+            bt_cfg=bcfg,
+            gaps=_csv_floats(args.gaps),
+            rvols=_csv_floats(args.rvols),
+            targets=_csv_floats(args.targets),
+            opening_ranges=_csv_ints(args.opening_ranges),
+            dev_start=args.dev_start,
+            dev_end=args.dev_end,
+            validation_start=args.validation_start,
+            validation_end=args.validation_end,
+            min_trades_per_split=args.min_trades,
+            bootstrap_samples=args.bootstrap_samples,
+        )
+        print("\n=== V8 ROBUSTNESS — DEVELOPMENT + VALIDATION ONLY ===")
+        print(f"grid combinations          : {len(ranking)}")
+        print(f"robust-gate combinations   : {int(ranking['robust_gate'].sum()) if not ranking.empty else 0}")
+        print("\nTop candidates (OOS intentionally hidden):")
+        cols = [
+            "gap_min","rvol_min","target_r","opening_range",
+            "trades_dev","expectancy_r_dev","profit_factor_dev",
+            "trades_validation","expectancy_r_validation","profit_factor_validation",
+            "expectancy_ci_low_dev","expectancy_ci_low_validation",
+            "robust_gate","ci_positive_both","worst_split_expectancy_r",
+        ]
+        print(ranking[cols].head(args.top).to_string(index=False) if not ranking.empty else "No results")
+        paths = write_robustness_reports(report_dir, results=results, ranking=ranking)
+        print("\nFINAL OOS was NOT evaluated. Freeze a parameter set before using --stage final.")
+    else:
+        summary, trades, quarterly = run_final_oos(
+            files=files,
+            strategy_cfg=scfg,
+            bt_cfg=bcfg,
+            oos_start=args.oos_start,
+            oos_end=args.oos_end,
+            bootstrap_samples=args.bootstrap_samples,
+        )
+        print("\n=== V8 FINAL OOS CHECK ===")
+        print(f"frozen parameters: gap>={scfg.gap_min_pct}, RVOL>={scfg.rvol_min}, OR={scfg.opening_range_minutes}m, target={scfg.target_r}R")
+        for k in ["trades","wins","win_rate","profit_factor","expectancy_r","expectancy_ci_low","expectancy_ci_high","net_pnl","return_pct","max_drawdown_pct"]:
+            v = summary.get(k)
+            print(f"{k:24s}: {v:,.4f}" if isinstance(v, float) else f"{k:24s}: {v}")
+        print("\nQuarterly OOS stability:")
+        print(quarterly.to_string(index=False) if not quarterly.empty else "No OOS trades")
+        paths = write_robustness_reports(report_dir, final_trades=trades, final_quarterly=quarterly, final_summary=summary)
+        print("\nIMPORTANT: Do not retune parameters from this OOS result. If you do, OOS is no longer unseen.")
+
+    print(f"\nRobustness reports: {report_dir.resolve()}")
+    for name, path in paths.items():
+        print(f"  {name:22s}: {path.name}")
+
 def add_strategy_args(p, include_exit=True):
     p.add_argument("--gap-min", type=float, default=1.0)
     p.add_argument("--opening-range", type=int, default=15)
@@ -264,7 +335,7 @@ def add_bt_args(p):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description="NSE trading system V7 - immutable raw data + cleaning audit + stability research")
+    parser = argparse.ArgumentParser(description="NSE trading system V8 - robust development/validation/OOS research")
     sub = parser.add_subparsers(required=True)
     p=sub.add_parser("login-url"); p.set_defaults(func=cmd_login_url)
     p=sub.add_parser("token"); p.add_argument("request_token"); p.set_defaults(func=cmd_token)
@@ -284,6 +355,17 @@ def build_parser():
 
     p=sub.add_parser("stability", help="Cleaned-data stability analysis by year/stock/gap/RVOL/entry time")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports"); p.add_argument("--session-start"); p.add_argument("--session-end"); add_strategy_args(p,True); add_bt_args(p); p.set_defaults(func=cmd_stability)
+
+
+    p=sub.add_parser("robustness", help="V8 parameter robustness with protected final OOS")
+    p.add_argument("--stage", choices=["develop","final"], default="develop")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--gaps",default="1.0,1.5,2.0"); p.add_argument("--rvols",default="1.5,3.0,5.0"); p.add_argument("--targets",default="1.5,2.0,2.5"); p.add_argument("--opening-ranges",default="15")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--oos-start",default="2026-01-01"); p.add_argument("--oos-end",default="2026-08-31")
+    p.add_argument("--min-trades",type=int,default=10); p.add_argument("--bootstrap-samples",type=int,default=1000); p.add_argument("--top",type=int,default=15)
+    add_strategy_args(p,True); add_bt_args(p); p.set_defaults(func=cmd_robustness)
 
     p=sub.add_parser("research", help="Target sensitivity with development/out-of-sample split")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports"); p.add_argument("--targets",default="0.75,1.0,1.25,1.5,2.0,2.5,3.0"); p.add_argument("--dev-start",default="2024-06-01"); p.add_argument("--dev-end",default="2025-12-31"); p.add_argument("--test-start",default="2026-01-01"); p.add_argument("--test-end",default="2026-09-01"); add_strategy_args(p,True); add_bt_args(p); p.set_defaults(func=cmd_research)

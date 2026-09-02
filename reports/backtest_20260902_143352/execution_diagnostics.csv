@@ -1,0 +1,2 @@
+candidate_symbol_sessions_entered,actual_trades,signal_bars_on_entered_sessions,target_exits,stop_exits,eod_exits,avg_winner_r,avg_loser_r,avg_realized_r,avg_mfe_r,avg_mae_r,avg_winner_duration_minutes,avg_loser_duration_minutes
+26,26,111,6,12,8,1.1483377647335524,-1.031062197607003,-0.10900836738599883,1.291896221674831,-0.8446328453001956,194.54545454545453,100.66666666666667
