@@ -30,6 +30,7 @@ from app.retest_discovery import run_retest_discovery, write_retest_reports
 from app.retest_strategy_backtest import run_retest_strategy_backtest, write_retest_strategy_reports
 from app.cross_sectional_momentum import run_cross_sectional_momentum, write_cross_sectional_momentum_reports
 from app.persistent_leader_discovery import run_persistent_leader_discovery, write_persistent_leader_reports
+from app.persistent_leader_backtest import run_persistent_leader_backtest, write_persistent_leader_backtest_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -225,6 +226,37 @@ def cmd_persistent_leaders(args):
     for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
     print("2026 FINAL OOS was NOT evaluated. V17 is discovery-only; no capital is allocated.")
     print("NOTE: V17 still uses V16's same-timestamp universe median, not actual NIFTY index candles.")
+
+
+def cmd_persistent_leader_backtest(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    cfg = _strategy_config_from_args(args)
+    result = run_persistent_leader_backtest(
+        files, cfg, args.dev_start, args.dev_end, args.validation_start, args.validation_end,
+        account_capital=args.capital, risk_pct=args.risk_pct, slippage_bps_each_side=args.slippage_bps,
+        bootstrap_samples=args.bootstrap_samples,
+    )
+    print("\n=== V18 PERSISTENT-LEADER TRADABLE BACKTEST — DEV + VALIDATION ONLY ===")
+    print(f"qualified persistent-leader candidates : {len(result.candidates)}")
+    print(f"trade intents                          : {len(result.intents)}")
+    if not result.portfolio_summary.empty:
+        print("\n--- SIMPLE ₹1,00,000 PROFIT / LOSS ---")
+        show = result.portfolio_summary[["split","entry_variant","stop_mode","exit_mode","selection","trades","starting_capital","net_pnl","ending_capital","return_pct","win_rate","total_charges","profit_factor"]]
+        print(show.sort_values(["entry_variant","stop_mode","exit_mode","selection","split"]).to_string(index=False))
+        paired = result.portfolio_summary.pivot_table(index=["entry_variant","stop_mode","exit_mode","selection"], columns="split", values="return_pct", aggfunc="first").reset_index()
+        if "DEV" in paired and "VALIDATION" in paired:
+            paired["worst_split_return_pct"] = paired[["DEV","VALIDATION"]].min(axis=1)
+            print("\n--- BEST CONSISTENT ₹1L VARIANTS (ranked by worse split) ---")
+            print(paired.sort_values("worst_split_return_pct", ascending=False).head(12).to_string(index=False))
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"persistent_leader_backtest_{stamp}"
+    paths = write_persistent_leader_backtest_reports(result, report_dir)
+    print(f"\nV18 reports: {report_dir.resolve()}")
+    for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
+    print("2026 FINAL OOS was NOT evaluated. Do not unlock it unless V18 survives DEV + Validation.")
+    print("₹1L result is now a shared-capital, cash-only historical simulation; it is not guaranteed future profit.")
 
 
 def cmd_validate_data(args):
@@ -747,6 +779,14 @@ def build_parser():
     p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
     p.add_argument("--bootstrap-samples",type=int,default=1000); add_strategy_args(p,True)
     p.set_defaults(func=cmd_cross_sectional_momentum)
+
+    p=sub.add_parser("persistent-leader-backtest", help="V18 tradable persistent-leader strategy with shared ₹1L capital")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--bootstrap-samples",type=int,default=500); p.add_argument("--capital",type=float,default=100000.0)
+    p.add_argument("--risk-pct",type=float,default=.005); p.add_argument("--slippage-bps",type=float,default=5.0)
+    add_strategy_args(p,True); p.set_defaults(func=cmd_persistent_leader_backtest)
 
     p=sub.add_parser("persistent-leaders", help="V17 persistent TOP10 leaders + cross-sectional spread discovery")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")

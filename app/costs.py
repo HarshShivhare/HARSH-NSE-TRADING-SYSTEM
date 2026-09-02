@@ -15,7 +15,7 @@ class IntradayEquityCostModel:
     brokerage_rate: float = 0.0003
     brokerage_cap_per_order: float = 20.0
     stt_sell_rate: float = 0.00025
-    exchange_txn_rate: float = 0.0000297
+    exchange_txn_rate: float = 0.0000307
     sebi_rate: float = 0.000001
     stamp_buy_rate: float = 0.00003
     gst_rate: float = 0.18

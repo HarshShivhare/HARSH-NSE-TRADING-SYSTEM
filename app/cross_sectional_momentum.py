@@ -160,7 +160,7 @@ def run_cross_sectional_momentum(files: Iterable[Path], cfg: StrategyConfig, dev
                 continue
             merged = ga.merge(gb.assign(still_top10=True), on=["session", "symbol"], how="left")
             ps.append({"split": split, "from_time": a, "to_time": b, "top10_events": len(ga),
-                       "still_top10_rate": float(merged.still_top10.fillna(False).mean())})
+                       "still_top10_rate": float(merged.still_top10.astype("boolean").fillna(False).mean())})
     persistence = pd.DataFrame(ps)
     return CrossSectionalMomentumResult(e, cohort, feature, persistence)
 
