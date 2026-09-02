@@ -29,6 +29,7 @@ from app.confirmation_backtest import run_confirmation_backtest, write_confirmat
 from app.retest_discovery import run_retest_discovery, write_retest_reports
 from app.retest_strategy_backtest import run_retest_strategy_backtest, write_retest_strategy_reports
 from app.cross_sectional_momentum import run_cross_sectional_momentum, write_cross_sectional_momentum_reports
+from app.persistent_leader_discovery import run_persistent_leader_discovery, write_persistent_leader_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -184,6 +185,46 @@ def cmd_cross_sectional_momentum(args):
     for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
     print("2026 FINAL OOS was NOT evaluated. V16 is discovery-only; no capital is allocated.")
     print("NOTE: market-relative strength uses the same-timestamp universe median, not NIFTY index data.")
+
+
+def cmd_persistent_leaders(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    cfg = _strategy_config_from_args(args)
+    result = run_persistent_leader_discovery(
+        files, cfg, args.dev_start, args.dev_end, args.validation_start, args.validation_end, args.bootstrap_samples
+    )
+    print("\n=== V17 PERSISTENT LEADER + CROSS-SECTIONAL SPREAD DISCOVERY — DEV + VALIDATION ONLY ===")
+    print(f"snapshot events : {len(result.events)}")
+    if not result.transition_summary.empty:
+        print("\n--- PERSISTENCE SAMPLE SIZES ---")
+        print(result.transition_summary.to_string(index=False))
+    if not result.leader_summary.empty:
+        print("\n--- PERSISTENT LEADERS (60M / 120M) ---")
+        show = result.leader_summary[
+            result.leader_summary.cohort.isin(["PERSIST_2","PERSIST_2_CONFIRMED","PERSIST_3","PERSIST_3_CONFIRMED"])
+            & result.leader_summary.horizon_min.isin([60,120])
+        ]
+        print(show.to_string(index=False))
+    if not result.spread_summary.empty:
+        print("\n--- LEADER VS BOTTOM50 SPREAD (60M / 120M; SESSION-CLUSTERED CI) ---")
+        show = result.spread_summary[
+            result.spread_summary.cohort.isin(["PERSIST_2","PERSIST_2_CONFIRMED","PERSIST_3","PERSIST_3_CONFIRMED"])
+            & (result.spread_summary.benchmark == "BOTTOM50")
+            & result.spread_summary.horizon_min.isin([60,120])
+        ]
+        print(show.to_string(index=False))
+    if not result.fade_summary.empty:
+        print("\n--- FADING LEADERS ---")
+        print(result.fade_summary.to_string(index=False))
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"persistent_leaders_{stamp}"
+    paths = write_persistent_leader_reports(result, report_dir)
+    print(f"\nV17 reports: {report_dir.resolve()}")
+    for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
+    print("2026 FINAL OOS was NOT evaluated. V17 is discovery-only; no capital is allocated.")
+    print("NOTE: V17 still uses V16's same-timestamp universe median, not actual NIFTY index candles.")
 
 
 def cmd_validate_data(args):
@@ -706,6 +747,13 @@ def build_parser():
     p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
     p.add_argument("--bootstrap-samples",type=int,default=1000); add_strategy_args(p,True)
     p.set_defaults(func=cmd_cross_sectional_momentum)
+
+    p=sub.add_parser("persistent-leaders", help="V17 persistent TOP10 leaders + cross-sectional spread discovery")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--bootstrap-samples",type=int,default=1000); add_strategy_args(p,True)
+    p.set_defaults(func=cmd_persistent_leaders)
 
     p=sub.add_parser("retest-strategy", help="V15 frozen retest strategy + pre-entry candidate ranking")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
