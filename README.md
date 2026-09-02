@@ -114,3 +114,36 @@ The concentration report helps identify whether a small number of trades or one 
 ## Research caveat
 
 V7 is still a **signal/strategy research engine**, not the final portfolio simulator. Capital is still evolved separately per symbol before trades are aggregated. Before claiming final portfolio returns we need a shared-capital, event-driven portfolio engine with global daily limits and concurrent-position handling.
+
+## V8.1 — Expanded research universe + visible progress
+
+V8.1 adds a current NIFTY 100 universe builder and visible progress during long robustness runs.
+
+Build the current NIFTY 100 symbols file and map it against Zerodha's NSE instrument dump:
+
+```bash
+python main.py universe --index nifty100 --output config/nifty100_symbols.txt
+```
+
+Then download the same historical window for the expanded universe:
+
+```bash
+python main.py bulk-download \
+  --symbols-file config/nifty100_symbols.txt \
+  --start 2023-09-01 --end 2026-09-01 \
+  --interval 5minute --format parquet
+```
+
+Existing files are skipped unless `--overwrite` is supplied, so the original starter symbols do not need to be downloaded again.
+
+Run robustness on all downloaded symbols:
+
+```bash
+python main.py robustness \
+  --stage develop \
+  --data-glob 'data/NSE_*_5minute_20230901_20260901.parquet'
+```
+
+The robustness engine now prints each split job and shows a spinner + elapsed time while a long backtest is running, so the terminal no longer looks frozen.
+
+**Survivorship-bias warning:** `universe` downloads the *current* NIFTY 100 constituent list. It is useful for increasing sample size, but it is not a point-in-time historical membership series. Do not treat results from older dates as survivorship-bias-free. A later research version should add historical constituent membership.

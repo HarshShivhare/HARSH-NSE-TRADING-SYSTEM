@@ -15,6 +15,7 @@ from app.research import target_sensitivity, write_research_reports
 from app.data_cleaner import clean_market_data, summarize_cleaning
 from app.stability import stability_tables, write_stability_reports
 from app.robustness import run_development_grid, run_final_oos, write_robustness_reports
+from app.universe import build_current_nse_universe
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -49,6 +50,26 @@ def cmd_download(args):
         overwrite=args.overwrite,
     )
     print(f"Saved: {path}")
+
+
+def cmd_universe(args):
+    print(f"Building current {args.index.upper()} universe...", flush=True)
+    result = build_current_nse_universe(
+        index_name=args.index,
+        output_path=args.output,
+        refresh_instruments=args.refresh_instruments,
+    )
+    print("\n=== V8.1 UNIVERSE ===")
+    print(f"index                 : {result.index_name.upper()}")
+    print(f"constituents requested: {len(result.requested_symbols)}")
+    print(f"matched Zerodha NSE   : {len(result.matched_symbols)}")
+    print(f"missing in Kite       : {len(result.missing_symbols)}")
+    print(f"symbols file          : {result.output_path.resolve()}")
+    print(f"audit file            : {result.audit_path.resolve()}")
+    if result.missing_symbols:
+        print("missing symbols       : " + ", ".join(result.missing_symbols))
+    print("\nWARNING: this is the CURRENT index membership, not a point-in-time historical universe.")
+    print("Using it for older dates introduces survivorship bias. V8.1 records this explicitly.")
 
 
 def cmd_bulk_download(args):
@@ -341,6 +362,11 @@ def build_parser():
     p=sub.add_parser("token"); p.add_argument("request_token"); p.set_defaults(func=cmd_token)
     p=sub.add_parser("profile"); p.set_defaults(func=cmd_profile)
     p=sub.add_parser("download"); p.add_argument("symbol"); p.add_argument("--start",required=True); p.add_argument("--end",required=True); p.add_argument("--interval",default="5minute"); p.add_argument("--format",choices=["parquet","csv"],default="parquet"); p.add_argument("--overwrite",action="store_true"); p.set_defaults(func=cmd_download)
+    p=sub.add_parser("universe", help="V8.1 build a current liquid NSE research universe")
+    p.add_argument("--index", choices=["nifty100"], default="nifty100")
+    p.add_argument("--output", default="config/nifty100_symbols.txt")
+    p.add_argument("--refresh-instruments", action="store_true")
+    p.set_defaults(func=cmd_universe)
     p=sub.add_parser("bulk-download"); src=p.add_mutually_exclusive_group(required=True); src.add_argument("--symbols"); src.add_argument("--symbols-file"); p.add_argument("--start",required=True); p.add_argument("--end",required=True); p.add_argument("--interval",default="5minute"); p.add_argument("--format",choices=["parquet","csv"],default="parquet"); p.add_argument("--chunk-days",type=int,default=60); p.add_argument("--pause",type=float,default=.40); p.add_argument("--retries",type=int,default=5); p.add_argument("--overwrite",action="store_true"); p.set_defaults(func=cmd_bulk_download)
 
     p=sub.add_parser("validate-data", help="Verify copied historical files before research")

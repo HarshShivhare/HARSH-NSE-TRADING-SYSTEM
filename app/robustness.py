@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from typing import Iterable
+import itertools
+import sys
+import threading
+import time
 
 import numpy as np
 import pandas as pd
@@ -10,6 +14,41 @@ import pandas as pd
 from .backtest import BacktestConfig, backtest_files, summarize_trades
 from .strategy import StrategyConfig
 
+
+
+class _Spinner:
+    """Tiny terminal spinner so long backtests do not look frozen."""
+    def __init__(self, message: str):
+        self.message = message
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self):
+        if not sys.stdout.isatty():
+            print(self.message, flush=True)
+            return self
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return self
+
+    def _run(self):
+        frames = "|/-\\"
+        started = time.monotonic()
+        i = 0
+        while not self._stop.wait(0.12):
+            elapsed = time.monotonic() - started
+            sys.stdout.write(f"\r{frames[i % len(frames)]} {self.message}  {elapsed:6.1f}s")
+            sys.stdout.flush()
+            i += 1
+
+    def __exit__(self, exc_type, exc, tb):
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=0.5)
+        if sys.stdout.isatty():
+            sys.stdout.write("\r" + " " * (len(self.message) + 30) + "\r")
+            sys.stdout.flush()
+        return False
 
 def _bootstrap_mean_ci(values: pd.Series, samples: int = 1000, seed: int = 42) -> tuple[float | None, float | None]:
     x = pd.to_numeric(values, errors="coerce").dropna().to_numpy(dtype=float)
@@ -75,42 +114,52 @@ def run_development_grid(
     bootstrap_samples: int = 1000,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     rows: list[dict] = []
+    combos = list(itertools.product(opening_ranges, gaps, rvols, targets))
+    total_jobs = len(combos) * 2
+    job = 0
+    started_all = time.monotonic()
 
-    for opening_range in opening_ranges:
-        for gap in gaps:
-            for rvol in rvols:
-                for target in targets:
-                    cfg = replace(
-                        base_strategy,
-                        opening_range_minutes=opening_range,
-                        gap_min_pct=gap,
-                        rvol_min=rvol,
-                        target_r=target,
-                    )
-                    for split, start, end in [
-                        ("DEV", dev_start, dev_end),
-                        ("VALIDATION", validation_start, validation_end),
-                    ]:
-                        trades = backtest_files(
-                            files,
-                            cfg,
-                            bt_cfg,
-                            session_start=start,
-                            session_end=end,
-                            quiet=True,
-                        )
-                        rows.append(
-                            _split_row(
-                                trades,
-                                bt_cfg.initial_capital,
-                                split,
-                                gap,
-                                rvol,
-                                target,
-                                opening_range,
-                                bootstrap_samples,
-                            )
-                        )
+    print(f"V8 robustness grid: {len(combos)} combinations / {total_jobs} split backtests", flush=True)
+    for combo_idx, (opening_range, gap, rvol, target) in enumerate(combos, start=1):
+        cfg = replace(
+            base_strategy,
+            opening_range_minutes=opening_range,
+            gap_min_pct=gap,
+            rvol_min=rvol,
+            target_r=target,
+        )
+        for split, start, end in [
+            ("DEV", dev_start, dev_end),
+            ("VALIDATION", validation_start, validation_end),
+        ]:
+            job += 1
+            message = (
+                f"[{job}/{total_jobs}] combo {combo_idx}/{len(combos)} {split} "
+                f"gap={gap:g} rvol={rvol:g} target={target:g}R OR={opening_range}m"
+            )
+            with _Spinner(message):
+                trades = backtest_files(
+                    files,
+                    cfg,
+                    bt_cfg,
+                    session_start=start,
+                    session_end=end,
+                    quiet=True,
+                )
+            elapsed = time.monotonic() - started_all
+            print(f"✓ {message} -> {len(trades)} trades | elapsed {elapsed/60:.1f}m", flush=True)
+            rows.append(
+                _split_row(
+                    trades,
+                    bt_cfg.initial_capital,
+                    split,
+                    gap,
+                    rvol,
+                    target,
+                    opening_range,
+                    bootstrap_samples,
+                )
+            )
 
     results = pd.DataFrame(rows)
     if results.empty:

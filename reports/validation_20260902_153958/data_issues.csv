@@ -1,0 +1,114 @@
+file,symbol,severity,issue
+NSE_ABB_5minute_20230901_20260901.parquet,ABB,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ADANIENSOL_5minute_20230901_20260901.parquet,ADANIENSOL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ADANIENT_5minute_20230901_20260901.parquet,ADANIENT,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ADANIGREEN_5minute_20230901_20260901.parquet,ADANIGREEN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ADANIPORTS_5minute_20230901_20260901.parquet,ADANIPORTS,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ADANIPOWER_5minute_20230901_20260901.parquet,ADANIPOWER,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_AMBUJACEM_5minute_20230901_20260901.parquet,AMBUJACEM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_APOLLOHOSP_5minute_20230901_20260901.parquet,APOLLOHOSP,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ASIANPAINT_5minute_20230901_20260901.parquet,ASIANPAINT,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_AXISBANK_5minute_20230901_20260901.parquet,AXISBANK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BAJAJ-AUTO_5minute_20230901_20260901.parquet,BAJAJ-AUTO,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BAJAJFINSV_5minute_20230901_20260901.parquet,BAJAJFINSV,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BAJAJHLDNG_5minute_20230901_20260901.parquet,BAJAJHLDNG,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BAJFINANCE_5minute_20230901_20260901.parquet,BAJFINANCE,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BANKBARODA_5minute_20230901_20260901.parquet,BANKBARODA,ERROR,ohlc_consistency_rows: 1
+NSE_BANKBARODA_5minute_20230901_20260901.parquet,BANKBARODA,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BEL_5minute_20230901_20260901.parquet,BEL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BHARTIARTL_5minute_20230901_20260901.parquet,BHARTIARTL,ERROR,ohlc_consistency_rows: 1
+NSE_BHARTIARTL_5minute_20230901_20260901.parquet,BHARTIARTL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BOSCHLTD_5minute_20230901_20260901.parquet,BOSCHLTD,ERROR,ohlc_consistency_rows: 1
+NSE_BOSCHLTD_5minute_20230901_20260901.parquet,BOSCHLTD,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BPCL_5minute_20230901_20260901.parquet,BPCL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_BRITANNIA_5minute_20230901_20260901.parquet,BRITANNIA,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_CANBK_5minute_20230901_20260901.parquet,CANBK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_CGPOWER_5minute_20230901_20260901.parquet,CGPOWER,ERROR,ohlc_consistency_rows: 1
+NSE_CGPOWER_5minute_20230901_20260901.parquet,CGPOWER,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_CHOLAFIN_5minute_20230901_20260901.parquet,CHOLAFIN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_CIPLA_5minute_20230901_20260901.parquet,CIPLA,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_COALINDIA_5minute_20230901_20260901.parquet,COALINDIA,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_CUMMINSIND_5minute_20230901_20260901.parquet,CUMMINSIND,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_DIVISLAB_5minute_20230901_20260901.parquet,DIVISLAB,ERROR,ohlc_consistency_rows: 1
+NSE_DIVISLAB_5minute_20230901_20260901.parquet,DIVISLAB,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_DLF_5minute_20230901_20260901.parquet,DLF,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_DMART_5minute_20230901_20260901.parquet,DMART,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_DRREDDY_5minute_20230901_20260901.parquet,DRREDDY,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_EICHERMOT_5minute_20230901_20260901.parquet,EICHERMOT,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ENRIN_5minute_20230901_20260901.parquet,ENRIN,WARN,filename_start_mismatch: requested=2023-09-01 actual=2025-06-19
+NSE_ETERNAL_5minute_20230901_20260901.parquet,ETERNAL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_GAIL_5minute_20230901_20260901.parquet,GAIL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_GODREJCP_5minute_20230901_20260901.parquet,GODREJCP,ERROR,ohlc_consistency_rows: 1
+NSE_GODREJCP_5minute_20230901_20260901.parquet,GODREJCP,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_GRASIM_5minute_20230901_20260901.parquet,GRASIM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HAL_5minute_20230901_20260901.parquet,HAL,ERROR,ohlc_consistency_rows: 1
+NSE_HAL_5minute_20230901_20260901.parquet,HAL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HCLTECH_5minute_20230901_20260901.parquet,HCLTECH,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HDFCAMC_5minute_20230901_20260901.parquet,HDFCAMC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HDFCBANK_5minute_20230901_20260901.parquet,HDFCBANK,ERROR,ohlc_consistency_rows: 1
+NSE_HDFCBANK_5minute_20230901_20260901.parquet,HDFCBANK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HDFCLIFE_5minute_20230901_20260901.parquet,HDFCLIFE,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HINDALCO_5minute_20230901_20260901.parquet,HINDALCO,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HINDUNILVR_5minute_20230901_20260901.parquet,HINDUNILVR,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HINDZINC_5minute_20230901_20260901.parquet,HINDZINC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_HYUNDAI_5minute_20230901_20260901.parquet,HYUNDAI,INFO,special_or_nonregular_bars: 12 across 1 sessions
+NSE_HYUNDAI_5minute_20230901_20260901.parquet,HYUNDAI,WARN,filename_start_mismatch: requested=2023-09-01 actual=2024-10-22
+NSE_ICICIBANK_5minute_20230901_20260901.parquet,ICICIBANK,ERROR,ohlc_consistency_rows: 1
+NSE_ICICIBANK_5minute_20230901_20260901.parquet,ICICIBANK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_INDHOTEL_5minute_20230901_20260901.parquet,INDHOTEL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_INDIGO_5minute_20230901_20260901.parquet,INDIGO,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_INFY_5minute_20230901_20260901.parquet,INFY,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_IOC_5minute_20230901_20260901.parquet,IOC,ERROR,ohlc_consistency_rows: 1
+NSE_IOC_5minute_20230901_20260901.parquet,IOC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_IRFC_5minute_20230901_20260901.parquet,IRFC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ITC_5minute_20230901_20260901.parquet,ITC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_JINDALSTEL_5minute_20230901_20260901.parquet,JINDALSTEL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_JIOFIN_5minute_20230901_20260901.parquet,JIOFIN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_JSWSTEEL_5minute_20230901_20260901.parquet,JSWSTEEL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_KOTAKBANK_5minute_20230901_20260901.parquet,KOTAKBANK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_LODHA_5minute_20230901_20260901.parquet,LODHA,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_LTM_5minute_20230901_20260901.parquet,LTM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_LT_5minute_20230901_20260901.parquet,LT,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_M&M_5minute_20230901_20260901.parquet,M&M,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_MARUTI_5minute_20230901_20260901.parquet,MARUTI,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_MAXHEALTH_5minute_20230901_20260901.parquet,MAXHEALTH,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_MAZDOCK_5minute_20230901_20260901.parquet,MAZDOCK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_MOTHERSON_5minute_20230901_20260901.parquet,MOTHERSON,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_MUTHOOTFIN_5minute_20230901_20260901.parquet,MUTHOOTFIN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_NESTLEIND_5minute_20230901_20260901.parquet,NESTLEIND,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_NTPC_5minute_20230901_20260901.parquet,NTPC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ONGC_5minute_20230901_20260901.parquet,ONGC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_PFC_5minute_20230901_20260901.parquet,PFC,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_PIDILITIND_5minute_20230901_20260901.parquet,PIDILITIND,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_PNB_5minute_20230901_20260901.parquet,PNB,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_POWERGRID_5minute_20230901_20260901.parquet,POWERGRID,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_RECLTD_5minute_20230901_20260901.parquet,RECLTD,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_RELIANCE_5minute_20230901_20260901.parquet,RELIANCE,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SBILIFE_5minute_20230901_20260901.parquet,SBILIFE,ERROR,ohlc_consistency_rows: 1
+NSE_SBILIFE_5minute_20230901_20260901.parquet,SBILIFE,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SBIN_5minute_20230901_20260901.parquet,SBIN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SHREECEM_5minute_20230901_20260901.parquet,SHREECEM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SHRIRAMFIN_5minute_20230901_20260901.parquet,SHRIRAMFIN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SIEMENS_5minute_20230901_20260901.parquet,SIEMENS,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SOLARINDS_5minute_20230901_20260901.parquet,SOLARINDS,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_SUNPHARMA_5minute_20230901_20260901.parquet,SUNPHARMA,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TATACAP_5minute_20230901_20260901.parquet,TATACAP,WARN,filename_start_mismatch: requested=2023-09-01 actual=2025-10-13
+NSE_TATACONSUM_5minute_20230901_20260901.parquet,TATACONSUM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TATAPOWER_5minute_20230901_20260901.parquet,TATAPOWER,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TATASTEEL_5minute_20230901_20260901.parquet,TATASTEEL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TCS_5minute_20230901_20260901.parquet,TCS,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TECHM_5minute_20230901_20260901.parquet,TECHM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TITAN_5minute_20230901_20260901.parquet,TITAN,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TMCV_5minute_20230901_20260901.parquet,TMCV,WARN,filename_start_mismatch: requested=2023-09-01 actual=2025-11-12
+NSE_TMPV_5minute_20230901_20260901.parquet,TMPV,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TORNTPHARM_5minute_20230901_20260901.parquet,TORNTPHARM,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TRENT_5minute_20230901_20260901.parquet,TRENT,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_TVSMOTOR_5minute_20230901_20260901.parquet,TVSMOTOR,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ULTRACEMCO_5minute_20230901_20260901.parquet,ULTRACEMCO,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_UNIONBANK_5minute_20230901_20260901.parquet,UNIONBANK,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_UNITDSPR_5minute_20230901_20260901.parquet,UNITDSPR,ERROR,ohlc_consistency_rows: 1
+NSE_UNITDSPR_5minute_20230901_20260901.parquet,UNITDSPR,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_VBL_5minute_20230901_20260901.parquet,VBL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_VEDL_5minute_20230901_20260901.parquet,VEDL,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_WIPRO_5minute_20230901_20260901.parquet,WIPRO,INFO,special_or_nonregular_bars: 24 across 2 sessions
+NSE_ZYDUSLIFE_5minute_20230901_20260901.parquet,ZYDUSLIFE,INFO,special_or_nonregular_bars: 24 across 2 sessions
