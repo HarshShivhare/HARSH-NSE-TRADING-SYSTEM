@@ -27,6 +27,8 @@ from app.trade_path_analysis import run_trade_path_analysis, write_trade_path_re
 from app.post_breakout_analysis import run_post_breakout_analysis, write_post_breakout_reports
 from app.confirmation_backtest import run_confirmation_backtest, write_confirmation_reports
 from app.retest_discovery import run_retest_discovery, write_retest_reports
+from app.retest_strategy_backtest import run_retest_strategy_backtest, write_retest_strategy_reports
+from app.cross_sectional_momentum import run_cross_sectional_momentum, write_cross_sectional_momentum_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -125,6 +127,63 @@ def _strategy_config_from_args(args):
 
 def _bt_config_from_args(args):
     return BacktestConfig(args.capital, args.risk_pct, args.max_trades_day, args.slippage_bps)
+
+
+def cmd_retest_strategy(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    cfg = _strategy_config_from_args(args)
+    cfg = StrategyConfig(**{**cfg.__dict__, "require_trend": args.trend == "on"})
+    result = run_retest_strategy_backtest(
+        files, cfg, args.dev_start, args.dev_end, args.validation_start, args.validation_end,
+        args.example_capital, args.example_risk_pct, args.slippage_bps, args.bootstrap_samples,
+    )
+    print("\n=== V15 RETEST STRATEGY + CANDIDATE RANKING — DEV + VALIDATION ONLY ===")
+    print(f"qualified candidates : {len(result.candidates)}")
+    if not result.selection_summary.empty:
+        print("\n--- SELECTION COUNTS ---")
+        print(result.selection_summary.to_string(index=False))
+    if not result.summary.empty:
+        show=result.summary[["split","selection","stop_mode","horizon_min","trades","win_rate","gross_expectancy_r","net_expectancy_r","profit_factor_net","net_ci_low","net_ci_high","avg_net_pnl_1l","avg_charges_1l","stop_rate"]]
+        print("\n--- NET STRATEGY SUMMARY ---")
+        print(show.to_string(index=False))
+    stamp=datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir=Path(args.report_dir)/f"retest_strategy_{stamp}"
+    paths=write_retest_strategy_reports(result,report_dir)
+    print(f"\nV15 reports: {report_dir.resolve()}")
+    for name,path in paths.items(): print(f"  {name:22s}: {path.name}")
+    print("2026 FINAL OOS was NOT evaluated. Do not unlock it unless V15 survives DEV + Validation.")
+    print("₹1L figures are independent-trade illustrations; V15 is not yet a shared-capital portfolio simulation.")
+
+
+def cmd_cross_sectional_momentum(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    cfg = _strategy_config_from_args(args)
+    result = run_cross_sectional_momentum(
+        files, cfg, args.dev_start, args.dev_end, args.validation_start, args.validation_end, args.bootstrap_samples
+    )
+    print("\n=== V16 CROSS-SECTIONAL RELATIVE STRENGTH + ABNORMAL MOMENTUM — DEV + VALIDATION ONLY ===")
+    print(f"snapshot events : {len(result.events)}")
+    if not result.cohort_summary.empty:
+        print("\n--- TOP10 CONTINUATION (60M / 120M) ---")
+        show = result.cohort_summary[(result.cohort_summary.cohort == "TOP10") & result.cohort_summary.horizon_min.isin([60,120])]
+        print(show.to_string(index=False))
+    if not result.feature_summary.empty:
+        print("\n--- TOP10 BROAD CONFIRMATIONS ---")
+        print(result.feature_summary.to_string(index=False))
+    if not result.persistence_summary.empty:
+        print("\n--- TOP10 PERSISTENCE ---")
+        print(result.persistence_summary.to_string(index=False))
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"cross_sectional_momentum_{stamp}"
+    paths = write_cross_sectional_momentum_reports(result, report_dir)
+    print(f"\nV16 reports: {report_dir.resolve()}")
+    for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
+    print("2026 FINAL OOS was NOT evaluated. V16 is discovery-only; no capital is allocated.")
+    print("NOTE: market-relative strength uses the same-timestamp universe median, not NIFTY index data.")
 
 
 def cmd_validate_data(args):
@@ -640,6 +699,22 @@ def build_parser():
     p.add_argument("--slippage-bps",type=float,default=5.0,help="Slippage in bps each side")
     add_strategy_args(p,True)
     p.set_defaults(func=cmd_confirmation_backtest, rvol_min=3.0, max_or_extension_atr=0.5, max_vwap_extension_pct=None)
+
+    p=sub.add_parser("cross-sectional-momentum", help="V16 cross-sectional relative strength + abnormal momentum discovery")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--bootstrap-samples",type=int,default=1000); add_strategy_args(p,True)
+    p.set_defaults(func=cmd_cross_sectional_momentum)
+
+    p=sub.add_parser("retest-strategy", help="V15 frozen retest strategy + pre-entry candidate ranking")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--trend",choices=["on","off"],default="off"); p.add_argument("--bootstrap-samples",type=int,default=1000)
+    p.add_argument("--example-capital",type=float,default=100000.0); p.add_argument("--example-risk-pct",type=float,default=.005)
+    p.add_argument("--slippage-bps",type=float,default=5.0); add_strategy_args(p,True)
+    p.set_defaults(func=cmd_retest_strategy,rvol_min=3.0,max_or_extension_atr=0.5,max_vwap_extension_pct=None)
 
     p=sub.add_parser("retest-discovery", help="V14 breakout-retest discovery + opportunity characteristics dashboard")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
