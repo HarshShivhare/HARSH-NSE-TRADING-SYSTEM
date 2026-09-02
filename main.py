@@ -31,6 +31,7 @@ from app.retest_strategy_backtest import run_retest_strategy_backtest, write_ret
 from app.cross_sectional_momentum import run_cross_sectional_momentum, write_cross_sectional_momentum_reports
 from app.persistent_leader_discovery import run_persistent_leader_discovery, write_persistent_leader_reports
 from app.persistent_leader_backtest import run_persistent_leader_backtest, write_persistent_leader_backtest_reports
+from app.opportunity_ranking_discovery import run_opportunity_ranking_discovery, write_opportunity_ranking_reports
 
 
 def _matched_files(pattern: str) -> list[Path]:
@@ -257,6 +258,37 @@ def cmd_persistent_leader_backtest(args):
     for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
     print("2026 FINAL OOS was NOT evaluated. Do not unlock it unless V18 survives DEV + Validation.")
     print("₹1L result is now a shared-capital, cash-only historical simulation; it is not guaranteed future profit.")
+
+
+def cmd_opportunity_ranking(args):
+    files = _matched_files(args.data_glob)
+    if not files:
+        raise SystemExit(f"No files matched: {args.data_glob}")
+    cfg = _strategy_config_from_args(args)
+    result = run_opportunity_ranking_discovery(
+        files, cfg, args.dev_start, args.dev_end, args.validation_start, args.validation_end, args.bootstrap_samples
+    )
+    print("\n=== V19 OPPORTUNITY RANKING DISCOVERY — DEV + VALIDATION ONLY ===")
+    print(f"snapshot events : {len(result.events)}")
+    if not result.rank_summary.empty:
+        print("\n--- TOP 1 / 3 / 5 CAUSAL OPPORTUNITY RANKS (60M / 120M) ---")
+        show = result.rank_summary[(result.rank_summary.snapshot_time.isin(["10:30","11:00","12:00"])) & result.rank_summary.horizon_min.isin([60,120])]
+        print(show.to_string(index=False))
+    if not result.winner_capture.empty:
+        print("\n--- FUTURE TOP-5% WINNER CAPTURE (evaluation label only) ---")
+        show = result.winner_capture[result.winner_capture.snapshot_time.isin(["10:30","11:00","12:00"])]
+        print(show.to_string(index=False))
+    if not result.score_spread.empty:
+        print("\n--- TOP-K VS BOTTOM-HALF SCORE SPREAD (SESSION-CLUSTERED CI) ---")
+        show = result.score_spread[result.score_spread.snapshot_time.isin(["10:30","11:00","12:00"])]
+        print(show.to_string(index=False))
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_dir = Path(args.report_dir) / f"opportunity_ranking_{stamp}"
+    paths = write_opportunity_ranking_reports(result, report_dir)
+    print(f"\nV19 reports: {report_dir.resolve()}")
+    for name, path in paths.items(): print(f"  {name:22s}: {path.name}")
+    print("2026 FINAL OOS was NOT evaluated. V19 is discovery-only; no capital is allocated.")
+    print("Future-winner labels are used only to evaluate causal rankings; they are never ranking inputs.")
 
 
 def cmd_validate_data(args):
@@ -779,6 +811,13 @@ def build_parser():
     p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
     p.add_argument("--bootstrap-samples",type=int,default=1000); add_strategy_args(p,True)
     p.set_defaults(func=cmd_cross_sectional_momentum)
+
+    p=sub.add_parser("opportunity-ranking", help="V19 causal Top1/3/5 opportunity ranking discovery")
+    p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
+    p.add_argument("--dev-start",default="2023-09-01"); p.add_argument("--dev-end",default="2025-06-30")
+    p.add_argument("--validation-start",default="2025-07-01"); p.add_argument("--validation-end",default="2025-12-31")
+    p.add_argument("--bootstrap-samples",type=int,default=1000); add_strategy_args(p,True)
+    p.set_defaults(func=cmd_opportunity_ranking)
 
     p=sub.add_parser("persistent-leader-backtest", help="V18 tradable persistent-leader strategy with shared ₹1L capital")
     p.add_argument("--data-glob",default="data/NSE_*_5minute_*.parquet"); p.add_argument("--report-dir",default="reports")
