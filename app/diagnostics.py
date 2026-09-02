@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .strategy import StrategyConfig, prepare_features
+from .data_cleaner import clean_market_data
 
 
 @dataclass(frozen=True)
@@ -128,7 +129,8 @@ def diagnose_files(files: Iterable[Path], cfg: StrategyConfig) -> DiagnosticResu
     for path in files:
         symbol = path.name.split("_")[1] if "_" in path.name else path.stem
         print(f"Diagnosing {symbol}: {path.name}")
-        df = pd.read_parquet(path)
+        raw_df = pd.read_parquet(path)
+        df = clean_market_data(raw_df, symbol).data
         funnel, quality, sensitivity = _symbol_diagnostics(df, symbol, cfg)
         funnel_frames.append(funnel)
         quality_rows.append(quality)

@@ -11,6 +11,7 @@ import pandas as pd
 from .costs import IntradayEquityCostModel
 from .risk import position_size
 from .strategy import StrategyConfig, prepare_features, signal_mask
+from .data_cleaner import clean_market_data
 
 
 @dataclass(frozen=True)
@@ -252,7 +253,9 @@ def backtest_files(
         symbol = path.name.split("_")[1] if "_" in path.name else path.stem
         if not quiet:
             print(f"Backtesting {symbol}: {path.name}")
-        df = pd.read_parquet(path)
+        raw_df = pd.read_parquet(path)
+        cleaned = clean_market_data(raw_df, symbol)
+        df = cleaned.data
         trades = run_symbol_backtest(df, symbol, strategy_cfg, bt_cfg, session_start=session_start, session_end=session_end)
         if not quiet:
             print(f"  {len(trades)} trades")

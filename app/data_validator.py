@@ -125,9 +125,24 @@ def validate_files(files: Iterable[Path], expected_symbols: list[str] | None = N
                 off_grid = int(((offset % expected_min) != 0).sum())
 
         if out_of_hours:
-            issues.append({"file": path.name, "symbol": symbol, "severity": "WARN", "issue": f"bars_outside_0915_1530: {out_of_hours}"})
+            # Special NSE sessions such as Diwali Muhurat trading are legitimate source data.
+            # V7 excludes any non-regular session from the regular intraday strategy instead
+            # of treating those candles as corrupt.
+            mins2 = work["date"].dt.hour * 60 + work["date"].dt.minute
+            out_mask = (mins2 < 9 * 60 + 15) | (mins2 > 15 * 60 + 30)
+            out_sessions = work.loc[out_mask, "date"].dt.date.nunique()
+            issues.append({"file": path.name, "symbol": symbol, "severity": "INFO", "issue": f"special_or_nonregular_bars: {out_of_hours} across {out_sessions} sessions"})
         if off_grid:
-            issues.append({"file": path.name, "symbol": symbol, "severity": "WARN", "issue": f"bars_off_interval_grid: {off_grid}"})
+            # Evening special sessions are anchored differently from 09:15, so their grid
+            # should not create a warning. Only inspect regular-session bars for grid drift.
+            regular = (mins >= 9 * 60 + 15) & (mins <= 15 * 60 + 30)
+            expected_min = _expected_interval_minutes(interval)
+            reg_off_grid = 0
+            if expected_min:
+                reg_offset = mins[regular] - (9 * 60 + 15)
+                reg_off_grid = int(((reg_offset % expected_min) != 0).sum())
+            if reg_off_grid:
+                issues.append({"file": path.name, "symbol": symbol, "severity": "WARN", "issue": f"bars_off_interval_grid_regular_session: {reg_off_grid}"})
 
         if meta and not work.empty:
             filename_start = pd.Timestamp(meta.group("start"))
@@ -142,6 +157,7 @@ def validate_files(files: Iterable[Path], expected_symbols: list[str] | None = N
 
         error_count = sum(1 for x in issues if x["file"] == path.name and x["severity"] == "ERROR")
         warn_count = sum(1 for x in issues if x["file"] == path.name and x["severity"] == "WARN")
+        info_count = sum(1 for x in issues if x["file"] == path.name and x["severity"] == "INFO")
         records.append({
             "file": path.name,
             "symbol": symbol,
@@ -156,6 +172,7 @@ def validate_files(files: Iterable[Path], expected_symbols: list[str] | None = N
             "duplicate_timestamps": duplicate_ts,
             "errors": error_count,
             "warnings": warn_count,
+            "infos": info_count,
             "status": "FAIL" if error_count else ("WARN" if warn_count else "PASS"),
             "sha256": _sha256(path),
         })
