@@ -1,0 +1,8 @@
+step,independent_bars,independent_sessions,cumulative_bars,cumulative_sessions
+complete_features,35370,480,35370,480
+time_window,158200,2480,30720,480
+trend_prev_close_gt_sma,10668,145,9280,145
+gap,12792,172,704,11
+prev_day_high_break,40750,1015,38,1
+opening_range_break,42866,1327,0,0
+rvol,32564,2292,0,0

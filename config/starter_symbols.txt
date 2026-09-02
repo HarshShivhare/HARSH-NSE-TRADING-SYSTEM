@@ -1,0 +1,13 @@
+# Starter universe for validating the data pipeline only.
+# This is NOT a point-in-time historical index universe and should not be used
+# to make final claims about strategy profitability.
+RELIANCE
+HDFCBANK
+ICICIBANK
+INFY
+TCS
+SBIN
+BHARTIARTL
+ITC
+LT
+AXISBANK

@@ -1,0 +1,11 @@
+symbol,status,rows,path,error
+RELIANCE,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_RELIANCE_5minute_20230901_20260901.parquet,
+HDFCBANK,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_HDFCBANK_5minute_20230901_20260901.parquet,
+ICICIBANK,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_ICICIBANK_5minute_20230901_20260901.parquet,
+INFY,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_INFY_5minute_20230901_20260901.parquet,
+TCS,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_TCS_5minute_20230901_20260901.parquet,
+SBIN,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_SBIN_5minute_20230901_20260901.parquet,
+BHARTIARTL,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_BHARTIARTL_5minute_20230901_20260901.parquet,
+ITC,ok,55362,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_ITC_5minute_20230901_20260901.parquet,
+LT,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_LT_5minute_20230901_20260901.parquet,
+AXISBANK,ok,55365,/Users/harshshivhare/Desktop/nse-trading-system/data/NSE_AXISBANK_5minute_20230901_20260901.parquet,
